@@ -1,0 +1,97 @@
+{
+  "name": "Grouper Dev",
+
+  // Compose-based setup: VSCode attaches to the grouper-dev service.
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "grouper-dev",
+
+  // grouper-dev repo root inside the container.
+  // The grouper source is at /workspace/grouper (sibling mount).
+  "workspaceFolder": "/workspace/grouper-dev",
+
+  // Run the init script on first container creation.
+  // Subsequent opens skip this (the script is idempotent).
+  "postCreateCommand": "bash /workspace/grouper-dev/scripts/init-grouper.sh",
+
+  // Ports forwarded to the host automatically when using browser-based VSCode
+  // (e.g., vscode.dev or GitHub Codespaces). For local VSCode the ports in
+  // docker-compose.yml handle this, but listing them here doesn't hurt.
+  "forwardPorts": [8080, 5005],
+  "portsAttributes": {
+    "8080": { "label": "Grouper UI", "onAutoForward": "notify" },
+    "5005": { "label": "JDWP Debug",  "onAutoForward": "silent" }
+  },
+
+  "customizations": {
+    "vscode": {
+
+      "extensions": [
+        // Claude Code — AI coding assistant (requires claude CLI, installed in image)
+        "anthropic.claude-code",
+
+        // Java core tooling
+        "vscjava.vscode-java-pack",          // Language support, Maven, debugger, test runner
+        "shengchen.vscode-checkstyle",       // Checkstyle — required for upstream contributions
+
+        // XML / config files (Grouper is very XML-heavy)
+        "redhat.vscode-xml",
+
+        // Utilities
+        "eamodio.gitlens",                   // Enhanced Git history and blame
+        "streetsidesoftware.code-spell-checker",
+        "ms-azuretools.vscode-docker"        // Docker sidebar for container management
+      ],
+
+      "settings": {
+        // ── Java ──────────────────────────────────────────────────────────────
+        "java.project.sourcePaths": [
+          "/workspace/grouper/grouper/src/grouper",
+          "/workspace/grouper/grouper/src/test",
+          "/workspace/grouper/grouper-ui/java/src",
+          "/workspace/grouper/grouper-ui/java/test",
+          "/workspace/grouper/grouper-ws/grouper-ws/src/grouper-ws",
+          "/workspace/grouper/grouper-ws/grouper-ws/src/test",
+          "/workspace/grouper/grouper-ws/grouper-ws-test/src/test"
+        ],
+        // Tell the JDT which settings.xml to use so it routes nexus-releases
+        // through our Maven Central mirror instead of the broken Sonatype URL.
+        "java.configuration.maven.userSettings": "/workspace/grouper-dev/maven/settings.xml",
+        // Skip modules we don't develop — they have unresolvable deps that
+        // generate thousands of spurious errors in the Problems panel.
+        "java.import.exclusions": [
+          "**/grouper-container/**",
+          "**/grouper-misc/grouper-ext-auth/**",
+          "**/grouper-misc/grouper-ext-auth-logic/**",
+          "**/grouper-misc/test-plugin/**",
+          "**/grouper-ws/grouper-ws-java-manual-client/**",
+          "**/grouper/src/test/edu/internet2/middleware/grouper/plugins/testImplementation/**"
+        ],
+        // Override m2e's default "execute maven-resources-plugin on every incremental
+        // build" to "ignore". Plugin 3.3.1 requires MavenFilteringException which is
+        // absent from m2e's classpath, producing ~15K ClassNotFoundErrors otherwise.
+        "java.configuration.maven.lifecycleMappings": "/workspace/grouper-dev/maven/lifecycle-mapping-metadata.xml",
+        "java.configuration.updateBuildConfiguration": "automatic",
+        "java.compile.nullAnalysis.mode": "automatic",
+
+        // ── Checkstyle ────────────────────────────────────────────────────────
+        "java.checkstyle.autocheck": false,
+        "cSpell.enabled": false,
+        "java.checkstyle.configuration": "/workspace/grouper/grouper-parent/src/checkstyle/checkstyle.xml",
+        "java.checkstyle.version": "8.23",
+
+        // ── Editor defaults (match Grouper coding standards) ──────────────────
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true,
+        "editor.rulers": [120, 200],
+        "editor.wordWrapColumn": 200,
+        "files.eol": "\n",
+        "files.trimTrailingWhitespace": true,
+        "files.insertFinalNewline": true,
+
+        // ── XML ───────────────────────────────────────────────────────────────
+        "xml.format.splitAttributes": true,
+        "xml.format.joinContentLines": false
+      }
+    }
+  }
+}

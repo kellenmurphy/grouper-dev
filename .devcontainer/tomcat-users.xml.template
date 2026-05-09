@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Tomcat users required by Grouper.
+  Passwords are substituted at container startup by scripts/init-grouper.sh
+  using the GROUPER_SYSTEM_PASSWORD and TEST_SUBJECT_PASSWORD env vars.
+-->
+<tomcat-users xmlns="http://tomcat.apache.org/xml"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://tomcat.apache.org/xml tomcat-users.xsd"
+              version="1.0">
+  <role rolename="grouper-admin"/>
+  <user username="GrouperSystem"  password="${GROUPER_SYSTEM_PASSWORD}" roles="grouper-admin"/>
+  <user username="test.subject.0" password="${TEST_SUBJECT_PASSWORD}"    roles="grouper-admin"/>
+</tomcat-users>

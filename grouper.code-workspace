@@ -1,0 +1,70 @@
+{
+  // This workspace file is used INSIDE the dev container.
+  // Open it once via File > Open Workspace from File after first connecting;
+  // VSCode remembers it for all subsequent container attaches.
+  //
+  // Paths here are container-internal mount points, not host filesystem paths.
+  "folders": [
+    {
+      "name": "[grouper] grouper-src",
+      "path": "/workspace/grouper"
+    },
+    {
+      "name": "[grouper] grouper-dev",
+      "path": "/workspace/grouper-dev"
+    }
+  ],
+  "extensions": {
+    "unwantedRecommendations": [
+      "github.copilot",
+      "github.copilot-chat"
+    ]
+  },
+  "settings": {
+    // ── Java Language Server ──────────────────────────────────────────────────
+    // Route nexus-releases through Maven Central instead of the broken Sonatype URL.
+    "java.configuration.maven.userSettings": "/workspace/grouper-dev/maven/settings.xml",
+    // Exclude modules we don't develop so the JDT doesn't try to import them.
+    // grouper-container uses ${grouper.version} which JDT can't resolve.
+    // The misc/ext-auth and container modules have broken transitive deps.
+    "java.import.exclusions": [
+      "**/grouper-container/**",
+      "**/grouper-misc/grouper-ext-auth/**",
+      "**/grouper-misc/grouper-ext-auth-logic/**",
+      "**/grouper-misc/test-plugin/**",
+      "**/grouper-ws/grouper-ws-java-manual-client/**",
+      "**/grouper/src/test/edu/internet2/middleware/grouper/plugins/testImplementation/**"
+    ],
+    // Override m2e's default "execute maven-resources-plugin on incremental build" to
+    // "ignore" — the plugin 3.3.1 requires MavenFilteringException which is not on
+    // m2e's classpath, flooding the Problems panel with ~15K ClassNotFoundErrors.
+    "java.configuration.maven.lifecycleMappings": "/workspace/grouper-dev/maven/lifecycle-mapping-metadata.xml",
+
+    "java.checkstyle.autocheck": false,
+    "cSpell.enabled": false,
+    "java.configuration.maven.notCoveredPluginExecutionSeverity": "ignore",
+    "java.errors.incompleteClasspath.severity": "ignore",
+
+    "window.title": "Grouper Development",
+    "peacock.remoteColor": "#4a2d6e",
+    "workbench.colorCustomizations": {
+      "activityBar.activeBackground": "#623c92",
+      "activityBar.background": "#623c92",
+      "activityBar.foreground": "#e7e7e7",
+      "activityBar.inactiveForeground": "#e7e7e799",
+      "activityBarBadge.background": "#b5794a",
+      "activityBarBadge.foreground": "#15202b",
+      "commandCenter.border": "#e7e7e799",
+      "sash.hoverBorder": "#623c92",
+      "statusBar.background": "#4a2d6e",
+      "statusBar.foreground": "#e7e7e7",
+      "statusBarItem.hoverBackground": "#623c92",
+      "statusBarItem.remoteBackground": "#4a2d6e",
+      "statusBarItem.remoteForeground": "#e7e7e7",
+      "titleBar.activeBackground": "#4a2d6e",
+      "titleBar.activeForeground": "#e7e7e7",
+      "titleBar.inactiveBackground": "#4a2d6e99",
+      "titleBar.inactiveForeground": "#e7e7e799"
+    }
+  }
+}

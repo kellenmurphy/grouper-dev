@@ -1,0 +1,38 @@
+root = true
+
+# Grouper coding standards (mirrors IntelliJ/Eclipse settings from the upstream wiki)
+# https://spaces.at.internet2.edu/display/Grouper/Grouper+development+environment
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.java]
+indent_style = space
+indent_size = 2
+max_line_length = 200
+
+[*.xml]
+indent_style = space
+indent_size = 2
+
+[*.properties]
+indent_style = space
+indent_size = 2
+
+[*.groovy]
+indent_style = space
+indent_size = 2
+
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+[Makefile]
+# Make requires real tabs
+indent_style = tab
+
+[*.md]
+trim_trailing_whitespace = false

@@ -1,0 +1,64 @@
+# Grouper local development stack.
+#
+# Services:
+#   grouper-dev  — JDK 17 + Maven + Ant + Tomcat 9 + Claude Code. VSCode attaches here.
+#   db           — PostgreSQL 16. Exposed on host port 5432 for DBeaver.
+#
+# Volumes:
+#   maven-cache   — Persists ~/.m2 across container rebuilds.
+#   postgres-data — Persists the Grouper database across restarts.
+
+services:
+
+  grouper-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      # grouper-dev repo — contains .devcontainer, .vscode, scripts, etc.
+      - ..:/workspace/grouper-dev:cached
+      # Internet2/grouper source — sibling repo, mounted for editing.
+      - ../../grouper:/workspace/grouper:cached
+      # Persist Maven local repo across container rebuilds.
+      - maven-cache:/root/.m2
+      # Persist Claude Code auth across container rebuilds.
+      - claude-auth:/root/.claude
+    ports:
+      - "8080:8080"   # Tomcat HTTP
+      - "5005:5005"   # JDWP debugger
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: grouper
+      DB_USER: grouper
+      DB_PASSWORD: grouper
+      GROUPER_SYSTEM_PASSWORD: changeme
+      TEST_SUBJECT_PASSWORD: changeme
+    command: sleep infinity
+
+  db:
+    image: postgres:16
+    ports:
+      # Exposed to host for DBeaver: connect at localhost:5432
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: grouper
+      POSTGRES_USER: grouper
+      POSTGRES_PASSWORD: grouper
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U grouper -d grouper"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+
+volumes:
+  maven-cache:
+  postgres-data:
+  claude-auth:

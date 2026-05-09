@@ -1,0 +1,32 @@
+{
+  // Workspace-level extension recommendations.
+  // VSCode will prompt teammates to install these when they open the repo.
+  "recommendations": [
+    // ── Required for this dev setup ──────────────────────────────────────────
+    "ms-vscode-remote.remote-containers",   // Dev Containers — the foundation of this setup
+    "anthropic.claude-code",                // Claude Code — AI coding assistant
+
+    // ── Java ─────────────────────────────────────────────────────────────────
+    "vscjava.vscode-java-pack",             // Language support, Maven, debugger, test runner
+    "shengchen.vscode-checkstyle",          // Checkstyle integration (required for upstream contribs)
+
+    // ── XML / config ─────────────────────────────────────────────────────────
+    "redhat.vscode-xml",                    // Schema-aware XML editing (Grouper is very XML-heavy)
+
+    // ── Database ─────────────────────────────────────────────────────────────
+    // DBeaver is the recommended external tool, but these are handy for
+    // quick queries without leaving VSCode.
+    "cweijan.vscode-database-client2",      // Lightweight DB client with MySQL support
+
+    // ── Git ──────────────────────────────────────────────────────────────────
+    "eamodio.gitlens",                      // Inline blame, history, branch comparison
+    "mhutchie.git-graph",                   // Visual branch graph — useful for upstream PR work
+
+    // ── Docker ───────────────────────────────────────────────────────────────
+    "ms-azuretools.vscode-docker",          // Container/image management sidebar
+
+    // ── Utilities ────────────────────────────────────────────────────────────
+    "streetsidesoftware.code-spell-checker",
+    "editorconfig.editorconfig"             // Picks up .editorconfig for non-Java files
+  ]
+}

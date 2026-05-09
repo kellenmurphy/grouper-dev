@@ -1,0 +1,127 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // PRIMARY: Attach to running Tomcat via JDWP
+    //
+    // Workflow:
+    //   1. Run "Tomcat: Start" task (or use the compound config below).
+    //   2. Wait for "Server startup in..." in the Tomcat terminal.
+    //   3. Launch this config to attach the debugger.
+    //   4. Set breakpoints in any Java source under grouper-parent/ — they work
+    //      immediately without a redeploy.
+    //
+    // Hot Code Replacement note:
+    //   After editing a method body, use Run > Apply Code Changes (or the
+    //   toolbar button while paused) to push the change into the running JVM
+    //   without a restart. This works for method body changes only. Adding or
+    //   removing methods/fields requires a full Tomcat restart + redeploy.
+    // ─────────────────────────────────────────────────────────────────────────
+    {
+      "type": "java",
+      "name": "Attach to Tomcat (JDWP)",
+      "request": "attach",
+      "hostName": "localhost",
+      "port": 5005,
+      // Source paths must match Grouper's non-standard directory layout.
+      "sourcePaths": [
+        "/workspace/grouper/grouper/src/grouper",
+        "/workspace/grouper/grouper/src/test",
+        "/workspace/grouper/grouper-ui/java/src",
+        "/workspace/grouper/grouper-ui/java/test",
+        "/workspace/grouper/grouper-ws/grouper-ws/src/grouper-ws",
+        "/workspace/grouper/grouper-ws/grouper-ws/src/test"
+      ]
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // COMPOUND: Start Tomcat, then attach debugger
+    //
+    // This is the single-button dev loop. Hit F5 (or click the green play
+    // button with "Start Tomcat + Attach" selected), Tomcat boots in the
+    // background, and the debugger attaches once it's ready.
+    // ─────────────────────────────────────────────────────────────────────────
+    {
+      "type": "java",
+      "name": "Start Tomcat + Attach Debugger",
+      "request": "attach",
+      "hostName": "localhost",
+      "port": 5005,
+      "sourcePaths": [
+        "/workspace/grouper/grouper/src/grouper",
+        "/workspace/grouper/grouper/src/test",
+        "/workspace/grouper/grouper-ui/java/src",
+        "/workspace/grouper/grouper-ui/java/test",
+        "/workspace/grouper/grouper-ws/grouper-ws/src/grouper-ws",
+        "/workspace/grouper/grouper-ws/grouper-ws/src/test"
+      ],
+      // preLaunchTask runs "Tomcat: Start" and waits for the "Server startup"
+      // line before attaching. The task's background problemMatcher handles this.
+      "preLaunchTask": "Tomcat: Start"
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // GSH: Debug a Grouper Shell script
+    //
+    // Useful for debugging loader jobs, custom scripts, or registry operations.
+    // Set a path to your .gsh script file when prompted.
+    // ─────────────────────────────────────────────────────────────────────────
+    {
+      "type": "java",
+      "name": "Debug GSH Script",
+      "request": "launch",
+      "mainClass": "edu.internet2.middleware.grouper.app.gsh.GrouperShell",
+      "args": "${input:gshArgs}",
+      "classpath": [
+        "/workspace/grouper/grouper/target/classes",
+        "/workspace/grouper/grouper/target/dependency/*"
+      ],
+      "sourcePaths": [
+        "/workspace/grouper/grouper/src/grouper"
+      ],
+      "env": {
+        "GROUPER_HOME": "/workspace/grouper/grouper"
+      }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // UNIT TEST: Debug a single JUnit test class
+    //
+    // Right-click a test file > "Run Java" also works, but this config lets
+    // you set a specific class and run it repeatably from the debug panel.
+    // ─────────────────────────────────────────────────────────────────────────
+    {
+      "type": "java",
+      "name": "Debug JUnit Test",
+      "request": "launch",
+      "mainClass": "org.junit.runner.JUnitCore",
+      "args": "${input:testClass}",
+      "classpath": [
+        "/workspace/grouper/grouper/target/test-classes",
+        "/workspace/grouper/grouper/target/classes",
+        "/workspace/grouper/grouper/target/dependency/*"
+      ],
+      "sourcePaths": [
+        "/workspace/grouper/grouper/src/grouper",
+        "/workspace/grouper/grouper/src/test"
+      ]
+    }
+
+  ],
+
+  "inputs": [
+    {
+      "id": "gshArgs",
+      "type": "promptString",
+      "description": "GSH arguments (e.g., /workspace/myscript.gsh or -registry -runscript)",
+      "default": "-registry -runscript"
+    },
+    {
+      "id": "testClass",
+      "type": "promptString",
+      "description": "Fully-qualified test class name (e.g., edu.internet2.middleware.grouper.GroupTest)",
+      "default": "edu.internet2.middleware.grouper."
+    }
+  ]
+}

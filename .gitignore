@@ -1,0 +1,7 @@
+# Local secrets — never commit these
+.env
+
+# Editors
+.DS_Store
+*.swp
+*.swo

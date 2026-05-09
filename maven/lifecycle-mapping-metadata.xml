@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  m2e lifecycle mapping override for the Grouper dev environment.
+
+  Problem: m2e's built-in mapping tells it to EXECUTE maven-resources-plugin:resources
+  on every incremental build. In m2e 2.7 / JDT LS 1.54, the embedded Maven runtime
+  (3.9.x) resolves maven-resources-plugin 3.3.1, which requires the class
+  org.apache.maven.shared.filtering.MavenFilteringException. That class is not on
+  m2e's own classpath, so every incremental build produces a ClassNotFoundException
+  and floods the Problems panel with ~15 000 errors.
+
+  Fix: override the action from <execute> to <ignore> so m2e skips the plugin
+  execution entirely. Resources are still copied correctly during an actual Maven
+  build (mvn install / package); this only affects the IDE's incremental builder.
+
+  Referenced from devcontainer.json and grouper.code-workspace via:
+    "java.configuration.maven.lifecycleMappings": "/workspace/grouper-dev/maven/lifecycle-mapping-metadata.xml"
+-->
+<lifecycleMappingMetadata>
+  <pluginExecutions>
+    <pluginExecution>
+      <pluginExecutionFilter>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <versionRange>[2.4,)</versionRange>
+        <goals>
+          <goal>resources</goal>
+          <goal>testResources</goal>
+          <goal>copy-resources</goal>
+        </goals>
+      </pluginExecutionFilter>
+      <action>
+        <ignore/>
+      </action>
+    </pluginExecution>
+  </pluginExecutions>
+</lifecycleMappingMetadata>

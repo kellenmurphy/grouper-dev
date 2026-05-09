@@ -1,0 +1,118 @@
+{
+  // Workspace settings — committed to the repo.
+  // These are applied inside the dev container and override user-level settings.
+
+  // ── Suppress GitHub Copilot promotions ──────────────────────────────────────
+  // The Java extension pack has Copilot hooks that fire even when not installed.
+  // Marking as unwanted tells VSCode to never prompt for these again.
+  "extensions.unwantedRecommendations": [
+    "github.copilot",
+    "github.copilot-chat"
+  ],
+  "java.configuration.updateBuildConfiguration": "automatic",
+  // Suppress "No view registered: copilot-chat / context-inspector" errors.
+  // The Java extension pack has Copilot hooks that fire even when Copilot isn't installed.
+  "java.help.firstView": "none",
+  "java.help.showReleaseNotes": false,
+  // Pin the runtime explicitly so VSCode doesn't prompt to upgrade or install Copilot.
+  // Path is the JDK location inside the eclipse-temurin:17-jdk-jammy container image.
+  "java.jdt.ls.java.home": "/opt/java/openjdk",
+  "java.configuration.runtimes": [
+    {
+      "name": "JavaSE-17",
+      "path": "/opt/java/openjdk",
+      "default": true
+    }
+  ],
+  "java.project.sourcePaths": [
+    "/workspace/grouper/grouper/src/grouper",
+    "/workspace/grouper/grouper/src/test",
+    "/workspace/grouper/grouper-ui/java/src",
+    "/workspace/grouper/grouper-ui/java/test",
+    "/workspace/grouper/grouper-ws/grouper-ws/src/grouper-ws",
+    "/workspace/grouper/grouper-ws/grouper-ws/src/test",
+    "/workspace/grouper/grouper-ws/grouper-ws-test/src/test"
+  ],
+  // Increase heap for the Java language server — grouper-parent is a large project.
+  "java.jdt.ls.vmargs": "-Xmx2048m -XX:+UseG1GC -XX:+UseStringDeduplication",
+
+  // ── Checkstyle ──────────────────────────────────────────────────────────────
+  // For new code use checkstyle.xml; for older files with more pre-existing
+  // violations, switch to checkstyle-legacy.xml in this setting.
+  "java.checkstyle.configuration": "/workspace/grouper/grouper-parent/src/checkstyle/checkstyle.xml",
+  // Grouper's config requires exactly 8.23 — do not upgrade.
+  "java.checkstyle.version": "8.23",
+  "java.checkstyle.autocheck": true,
+
+  // ── Editor — Grouper coding standards ───────────────────────────────────────
+  // These match the IntelliJ/Eclipse settings documented in the upstream wiki.
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.rulers": [120, 200],
+  "editor.wordWrapColumn": 200,
+  "editor.detectIndentation": false,
+
+  // ── Files ───────────────────────────────────────────────────────────────────
+  "files.eol": "\n",
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.associations": {
+    "*.properties": "properties",
+    "*.gsh": "groovy",
+    "*.hbm.xml": "xml",
+    "*.cfg.xml": "xml"
+  },
+  // Exclude build artifacts from the file explorer (they're still on disk).
+  "files.exclude": {
+    "**/target": true,
+    "**/.classpath": true,
+    "**/.project": true,
+    "**/.settings": true,
+    "**/.factorypath": true
+  },
+
+  // ── XML ─────────────────────────────────────────────────────────────────────
+  "xml.format.splitAttributes": true,
+  "xml.format.preserveAttributeLineBreaks": true,
+
+  // ── Search ──────────────────────────────────────────────────────────────────
+  // Skip generated/compiled output in search results.
+  "search.exclude": {
+    "**/target": true,
+    "**/node_modules": true,
+    "**/.git": true
+  },
+
+  // ── Terminal ────────────────────────────────────────────────────────────────
+  // Default to bash inside the container.
+  "terminal.integrated.defaultProfile.linux": "bash",
+
+  // ── Git ─────────────────────────────────────────────────────────────────────
+  "git.autofetch": true,
+  "gitlens.currentLine.enabled": true,
+
+  // ── Window ──────────────────────────────────────────────────────────────────
+  "window.title": "Grouper Development",
+
+  // ── Peacock — purple, distinct from the teal stacks workspace ────────────────
+  "peacock.remoteColor": "#4a2d6e",
+  "workbench.colorCustomizations": {
+    "activityBar.activeBackground": "#6b42a0",
+    "activityBar.background": "#6b42a0",
+    "activityBar.foreground": "#e7e7e7",
+    "activityBar.inactiveForeground": "#e7e7e799",
+    "activityBarBadge.background": "#2a1240",
+    "activityBarBadge.foreground": "#e7e7e7",
+    "commandCenter.border": "#e7e7e799",
+    "sash.hoverBorder": "#6b42a0",
+    "statusBar.background": "#4a2d6e",
+    "statusBar.foreground": "#e7e7e7",
+    "statusBarItem.hoverBackground": "#6b42a0",
+    "statusBarItem.remoteBackground": "#4a2d6e",
+    "statusBarItem.remoteForeground": "#e7e7e7",
+    "titleBar.activeBackground": "#4a2d6e",
+    "titleBar.activeForeground": "#e7e7e7",
+    "titleBar.inactiveBackground": "#4a2d6e99",
+    "titleBar.inactiveForeground": "#e7e7e799"
+  }
+}

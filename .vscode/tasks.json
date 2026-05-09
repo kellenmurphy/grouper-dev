@@ -1,0 +1,173 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // BUILD TASKS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    {
+      // Default build task (Ctrl+Shift+B / Cmd+Shift+B).
+      // Builds all modules from grouper-parent, skipping tests for speed.
+      // Run this after pulling upstream changes.
+      "label": "Maven: Build All (skip tests)",
+      "type": "shell",
+      "command": "mvn install dependency:copy-dependencies -DskipTests -U",
+      "options": {
+        "cwd": "${workspaceFolder}/../grouper/grouper-parent"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": "$javac",
+      "presentation": {
+        "panel": "shared",
+        "reveal": "always",
+        "clear": true
+      }
+    },
+
+    {
+      // Faster: rebuild only the API (grouper) submodule.
+      // Use this during active API development to avoid rebuilding UI/WS.
+      "label": "Maven: Build API only",
+      "type": "shell",
+      "command": "mvn install -DskipTests",
+      "options": {
+        "cwd": "${workspaceFolder}/../grouper/grouper"
+      },
+      "group": "build",
+      "problemMatcher": "$javac"
+    },
+
+    {
+      // Rebuild the UI module only.
+      "label": "Maven: Build UI only",
+      "type": "shell",
+      "command": "mvn install -DskipTests",
+      "options": {
+        "cwd": "${workspaceFolder}/../grouper/grouper-ui"
+      },
+      "group": "build",
+      "problemMatcher": "$javac"
+    },
+
+    {
+      // Rebuild the WS module only.
+      "label": "Maven: Build WS only",
+      "type": "shell",
+      "command": "mvn install -DskipTests",
+      "options": {
+        "cwd": "${workspaceFolder}/../grouper/grouper-ws"
+      },
+      "group": "build",
+      "problemMatcher": "$javac"
+    },
+
+    {
+      // Full build WITH tests. Slower; run before committing upstream work.
+      "label": "Maven: Build All (with tests)",
+      "type": "shell",
+      "command": "mvn install dependency:copy-dependencies -U",
+      "options": {
+        "cwd": "${workspaceFolder}/../grouper/grouper-parent"
+      },
+      "group": "build",
+      "problemMatcher": "$javac"
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // DEPLOY TASKS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    {
+      // Populate WEB-INF/lib and deploy the UI webapp to Tomcat.
+      // Uses mvn dependency:copy-dependencies — no Ant required.
+      // grouper-ui has no build.xml; this is the correct approach for 6.x.
+      "label": "Deploy: UI to Tomcat",
+      "type": "shell",
+      "command": "rm -rf /workspace/grouper/grouper-ui/webapp/WEB-INF/lib && mkdir -p /workspace/grouper/grouper-ui/webapp/WEB-INF/lib && mvn -f /workspace/grouper/grouper-ui dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=/workspace/grouper/grouper-ui/webapp/WEB-INF/lib && cp $(ls /workspace/grouper/grouper-ui/target/grouper-ui-*.jar | grep -v sources | grep -v tests) /workspace/grouper/grouper-ui/webapp/WEB-INF/lib/ && rm -rf ${CATALINA_HOME}/webapps/grouper && cp -r /workspace/grouper/grouper-ui/webapp ${CATALINA_HOME}/webapps/grouper && mkdir -p ${CATALINA_HOME}/webapps/grouper/WEB-INF/classes && cp -rL /workspace/grouper/grouper/conf/. ${CATALINA_HOME}/webapps/grouper/WEB-INF/classes/",
+      "problemMatcher": []
+    },
+
+    {
+      // Populate WEB-INF/lib and deploy the WS webapp to Tomcat.
+      "label": "Deploy: WS to Tomcat",
+      "type": "shell",
+      "command": "rm -rf /workspace/grouper/grouper-ws/grouper-ws/webapp/WEB-INF/lib && mkdir -p /workspace/grouper/grouper-ws/grouper-ws/webapp/WEB-INF/lib && mvn -f /workspace/grouper/grouper-ws/grouper-ws dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=/workspace/grouper/grouper-ws/grouper-ws/webapp/WEB-INF/lib && cp $(ls /workspace/grouper/grouper-ws/grouper-ws/target/grouper-ws-*.jar | grep -v sources | grep -v tests) /workspace/grouper/grouper-ws/grouper-ws/webapp/WEB-INF/lib/ && rm -rf ${CATALINA_HOME}/webapps/grouper-ws && cp -r /workspace/grouper/grouper-ws/grouper-ws/webapp ${CATALINA_HOME}/webapps/grouper-ws",
+      "problemMatcher": []
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // TOMCAT TASKS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    {
+      // Start Tomcat in the foreground. CATALINA_OPTS (set in the Dockerfile)
+      // includes the JDWP agent, so the debugger can attach immediately after.
+      // This is a background task — VSCode tracks it as running until Tomcat stops.
+      "label": "Tomcat: Start",
+      "type": "shell",
+      "command": "${CATALINA_HOME}/bin/catalina.sh run",
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^.*$",
+          "file": 0,
+          "line": 1,
+          "message": 2
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*Catalina.*$",
+          "endsPattern": "^.*Server startup in.*$"
+        }
+      },
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always",
+        "clear": true
+      }
+    },
+
+    {
+      "label": "Tomcat: Stop",
+      "type": "shell",
+      "command": "${CATALINA_HOME}/bin/catalina.sh stop",
+      "problemMatcher": []
+    },
+
+    {
+      "label": "Tomcat: Restart",
+      "dependsOrder": "sequence",
+      "dependsOn": ["Tomcat: Stop", "Tomcat: Start"],
+      "problemMatcher": []
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // GROUPER SHELL (GSH)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    {
+      // Initialize (or re-initialize) the Grouper database schema.
+      // Safe to re-run; Grouper handles existing schemas gracefully.
+      "label": "GSH: Init Registry",
+      "type": "shell",
+      "command": "cd /workspace/grouper && grouper/bin/gsh.sh -registry -runscript",
+      "problemMatcher": []
+    },
+
+    {
+      // Open an interactive GSH session in the terminal.
+      "label": "GSH: Interactive Shell",
+      "type": "shell",
+      "command": "cd /workspace/grouper && grouper/bin/gsh.sh",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      }
+    }
+  ]
+}
