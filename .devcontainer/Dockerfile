@@ -16,27 +16,44 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
         maven \
         postgresql-client \
+        sudo \
         vim \
         wget \
     && rm -rf /var/lib/apt/lists/*
 
+# ── Non-root user ─────────────────────────────────────────────────────────────
+# The Claude Code VS Code extension's background helper processes fail under
+# root (the CLI refuses --dangerously-skip-permissions as root), so the
+# container runs as "vscode" with passwordless sudo for dev convenience.
+RUN groupadd --gid 1000 vscode \
+    && useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash vscode \
+    && echo "vscode ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/vscode \
+    && chmod 0440 /etc/sudoers.d/vscode
+
 # ── Tomcat 9 ──────────────────────────────────────────────────────────────────
 # Grouper 5.x targets Tomcat 9. Pin to a specific version for reproducibility.
-ARG TOMCAT_VERSION=9.0.87
+ARG TOMCAT_VERSION=9.0.120
 ENV CATALINA_HOME=/opt/tomcat
 
 RUN curl -fsSL \
         "https://archive.apache.org/dist/tomcat/tomcat-9/v${TOMCAT_VERSION}/bin/apache-tomcat-${TOMCAT_VERSION}.tar.gz" \
     | tar -xzC /opt \
     && mv /opt/apache-tomcat-${TOMCAT_VERSION} ${CATALINA_HOME} \
-    && chmod +x ${CATALINA_HOME}/bin/*.sh
+    && chmod +x ${CATALINA_HOME}/bin/*.sh \
+    && chown -R vscode:vscode ${CATALINA_HOME}
 
-# ── Node.js 20 LTS + Claude Code ──────────────────────────────────────────────
-# Node.js 20.12.0+ is required by Claude Code.
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+# ── Node.js 24 LTS + Claude Code ──────────────────────────────────────────────
+# Node.js is required by Claude Code; v24 is the active LTS line.
+# claude-code is pinned; Renovate bumps it (renovate.json) after a cooldown so
+# a compromised release can't reach a rebuild on day one.
+RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/* \
-    && npm install -g @anthropic-ai/claude-code
+    && npm install -g @anthropic-ai/claude-code@2.1.233
+
+# The CLI self-updates at runtime by default, which would silently defeat the
+# version pin above — updates arrive only via Renovate PR + image rebuild.
+ENV DISABLE_AUTOUPDATER=1
 
 # ── Tomcat users ──────────────────────────────────────────────────────────────
 # Passwords are substituted at container startup by scripts/init-grouper.sh.
@@ -52,11 +69,19 @@ ENV CATALINA_OPTS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address
 # 5005: JDWP remote debug
 EXPOSE 8080 5005
 
+# ── Directories owned by vscode ───────────────────────────────────────────────
+# Pre-create the mount points so fresh named volumes inherit vscode ownership
+# instead of defaulting to root.
+RUN mkdir -p /workspace /home/vscode/.m2 /home/vscode/.claude \
+    && chown -R vscode:vscode /workspace /home/vscode/.m2 /home/vscode/.claude
+
 # ── Maven local repo ──────────────────────────────────────────────────────────
 # Persisted as a named Docker volume to avoid re-downloading deps on rebuild.
-VOLUME /root/.m2
+VOLUME /home/vscode/.m2
 
 WORKDIR /workspace
 
 # Dev containers keep the container alive; VSCode manages the lifecycle.
 CMD ["sleep", "infinity"]
+
+USER vscode

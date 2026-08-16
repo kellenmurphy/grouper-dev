@@ -19,8 +19,8 @@ echo "==> [init-grouper] Starting Grouper dev environment setup..."
 # grouper-parent/pom.xml declares a "nexus-releases" repo at the Sonatype
 # staging API (upload-only; returns 400 on GET). Mirror it to Maven Central
 # so the JDT and Maven don't accumulate thousands of cached failures.
-mkdir -p /root/.m2
-ln -sf /workspace/grouper-dev/maven/settings.xml /root/.m2/settings.xml
+mkdir -p "$HOME/.m2"
+ln -sf /workspace/grouper-dev/maven/settings.xml "$HOME/.m2/settings.xml"
 echo "==> [init-grouper] Linked Maven settings.xml (nexus-releases mirror)."
 
 # ── 1. Wait for PostgreSQL ────────────────────────────────────────────────────

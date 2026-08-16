@@ -20,9 +20,9 @@ services:
       # Internet2/grouper source — sibling repo, mounted for editing.
       - ../../grouper:/workspace/grouper:cached
       # Persist Maven local repo across container rebuilds.
-      - maven-cache:/root/.m2
+      - maven-cache:/home/vscode/.m2
       # Persist Claude Code auth across container rebuilds.
-      - claude-auth:/root/.claude
+      - claude-auth:/home/vscode/.claude
     ports:
       - "8080:8080"   # Tomcat HTTP
       - "5005:5005"   # JDWP debugger
