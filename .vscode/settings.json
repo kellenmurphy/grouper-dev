@@ -92,27 +92,5 @@
   "gitlens.currentLine.enabled": true,
 
   // ── Window ──────────────────────────────────────────────────────────────────
-  "window.title": "Grouper Development",
-
-  // ── Peacock — purple, distinct from the teal stacks workspace ────────────────
-  "peacock.remoteColor": "#4a2d6e",
-  "workbench.colorCustomizations": {
-    "activityBar.activeBackground": "#6b42a0",
-    "activityBar.background": "#6b42a0",
-    "activityBar.foreground": "#e7e7e7",
-    "activityBar.inactiveForeground": "#e7e7e799",
-    "activityBarBadge.background": "#2a1240",
-    "activityBarBadge.foreground": "#e7e7e7",
-    "commandCenter.border": "#e7e7e799",
-    "sash.hoverBorder": "#6b42a0",
-    "statusBar.background": "#4a2d6e",
-    "statusBar.foreground": "#e7e7e7",
-    "statusBarItem.hoverBackground": "#6b42a0",
-    "statusBarItem.remoteBackground": "#4a2d6e",
-    "statusBarItem.remoteForeground": "#e7e7e7",
-    "titleBar.activeBackground": "#4a2d6e",
-    "titleBar.activeForeground": "#e7e7e7",
-    "titleBar.inactiveBackground": "#4a2d6e99",
-    "titleBar.inactiveForeground": "#e7e7e799"
-  }
+  "window.title": "Grouper Development"
 }
