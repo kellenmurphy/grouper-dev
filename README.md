@@ -44,8 +44,18 @@ This repo (`grouper-dev`) lives alongside the [`Internet2/grouper`](https://gith
   - `ms-vscode-remote.remote-containers`
 
 **Mac**
-- Docker Desktop
-- VSCode with the Dev Containers extension
+- OrbStack (recommended — lighter than Docker Desktop, native ARM64) or Docker Desktop:
+
+  ```bash
+  brew install orbstack          # or: brew install --cask docker
+  ```
+
+- VSCode with the Dev Containers extension:
+
+  ```bash
+  brew install --cask visual-studio-code
+  code --install-extension ms-vscode-remote.remote-containers
+  ```
 
 ## Getting started
 
@@ -60,13 +70,21 @@ The Grouper source itself is provisioned automatically: on container open, `scri
 
 ### 2. Open in VSCode
 
-From Windows, run (or create a desktop shortcut for this):
+**Windows** — run (or create a desktop shortcut for this):
 
 ```
 wsl.exe -d Ubuntu -e bash -c "code ~/repos/grouper-dev"
 ```
 
-VSCode opens in WSL mode and prompts: **"Reopen in Container"** — click it.
+VSCode opens in WSL mode.
+
+**Mac** — from a terminal (make sure the Docker engine is running first):
+
+```bash
+code ~/repos/grouper-dev
+```
+
+Either way, VSCode prompts: **"Reopen in Container"** — click it.
 Alternatively use **F1 → Dev Containers: Reopen in Container**.
 
 The first build takes several minutes (pulling the base image, installing
@@ -85,7 +103,7 @@ VSCode remembers this for all future container attaches — you only do this onc
 ### 4. Build Grouper
 
 ```
-Ctrl+Shift+B  →  Maven: Build All (skip tests)
+Ctrl+Shift+B (Cmd+Shift+B on Mac)  →  Maven: Build All (skip tests)
 ```
 
 First run downloads the entire Maven dependency tree — this takes a while.
@@ -228,3 +246,5 @@ The container uses JDK 17 (`eclipse-temurin:17-jdk-jammy`), matching the
 On Apple Silicon, `eclipse-temurin` has native ARM64 builds — no Rosetta emulation.
 No WSL-specific steps needed; just open the `grouper-dev` folder directly in VSCode
 and reopen in container when prompted.
+
+Keybindings map as usual: `Ctrl+Shift+B` → `Cmd+Shift+B`, and `F5` may need `fn+F5` depending on your function-key settings. Everything inside the container (tasks, launch configs, paths) is identical on both platforms.
