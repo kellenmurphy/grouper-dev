@@ -13,6 +13,11 @@
   // processes fail under root.
   "remoteUser": "vscode",
 
+  // Runs on the HOST before the container builds: shallow-clones the
+  // Internet2/grouper source into the sibling dir the compose file bind-mounts,
+  // if it isn't already there. Never touches an existing checkout.
+  "initializeCommand": "bash ./scripts/clone-grouper-src.sh",
+
   // Run the init script on first container creation.
   // Subsequent opens skip this (the script is idempotent).
   "postCreateCommand": "bash /workspace/grouper-dev/scripts/init-grouper.sh",

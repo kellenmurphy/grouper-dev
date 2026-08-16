@@ -16,7 +16,7 @@ This repo (`grouper-dev`) lives alongside the [`Internet2/grouper`](https://gith
 │   ├── conf/          ← static Grouper config files (tracked here, symlinked into grouper/conf/)
 │   ├── maven/         ← settings.xml (mirrors broken Sonatype repo → Maven Central)
 │   ├── tomcat/        ← Tomcat JVM settings (setenv.sh, symlinked into $CATALINA_HOME/bin/)
-│   ├── scripts/       ← init-grouper.sh (runs on container creation)
+│   ├── scripts/       ← init-grouper.sh (container creation), clone-grouper-src.sh (host, pre-build)
 │   ├── grouper.code-workspace  ← open this inside the container for both repos
 │   ├── CLAUDE.md      ← Claude Code context (auto-read by claude CLI)
 │   └── README.md      ← this file
@@ -49,13 +49,14 @@ This repo (`grouper-dev`) lives alongside the [`Internet2/grouper`](https://gith
 
 ## Getting started
 
-### 1. Clone both repos
+### 1. Clone this repo
 
 ```bash
 cd ~/repos
-git clone https://github.com/Internet2/grouper.git
 git clone <this-repo-url> grouper-dev
 ```
+
+The Grouper source itself is provisioned automatically: on container open, `scripts/clone-grouper-src.sh` runs on the host and shallow-clones the HEAD of `GROUPER_7_BRANCH` from `Internet2/grouper` into the sibling `grouper/` directory (no history — the full repo is huge). An existing checkout there is never touched. To use a different branch or your fork, export `GROUPER_SRC_BRANCH` / `GROUPER_SRC_REPO` before opening the container. If you later need blame or log depth, run `git fetch --unshallow` inside the checkout.
 
 ### 2. Open in VSCode
 
