@@ -29,10 +29,10 @@ This repo (`grouper-dev`) lives alongside the [`Internet2/grouper`](https://gith
 |-----------|---------|---------|
 | Eclipse Temurin JDK | 17 | Java runtime and compiler |
 | Maven | 3.x | Primary build tool |
-| Tomcat | 9.0.87 | Servlet container with JDWP debug agent |
+| Tomcat | 9.x (pinned in Dockerfile) | Servlet container with JDWP debug agent |
 | PostgreSQL client | 16 | DB admin from container terminal |
-| Node.js | 20 LTS | Required by Claude Code |
-| Claude Code | latest | AI coding assistant (CLI + VSCode extension) |
+| Node.js | 24 LTS | Required by Claude Code |
+| Claude Code | pinned in Dockerfile, Renovate-managed | AI coding assistant (CLI + VSCode extension) |
 
 ## Prerequisites
 
@@ -201,6 +201,10 @@ GROUPER_SYSTEM_PASSWORD=yoursecretpassword
 TEST_SUBJECT_PASSWORD=yoursecretpassword
 POSTGRES_PASSWORD=yourdbpassword
 DB_PASSWORD=yourdbpassword
+# Optional: skip interactive Claude sign-in entirely (mint with `claude setup-token`).
+# Per-person credential — never commit or share it. Interactive sign-in already
+# persists in the claude-auth volume, so most people can omit this.
+CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat...
 ```
 
 ## Checkstyle

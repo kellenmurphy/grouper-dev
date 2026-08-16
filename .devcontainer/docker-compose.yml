@@ -37,6 +37,10 @@ services:
       DB_PASSWORD: grouper
       GROUPER_SYSTEM_PASSWORD: changeme
       TEST_SUBJECT_PASSWORD: changeme
+      # Optional: long-lived Claude Code token (from `claude setup-token`) set in
+      # .devcontainer/.env — skips interactive sign-in. Inert when unset; the
+      # claude-auth volume already persists interactive sign-in across rebuilds.
+      CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
     command: sleep infinity
 
   db:

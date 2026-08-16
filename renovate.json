@@ -1,0 +1,41 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "enabledManagers": ["dockerfile", "custom.regex"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Tomcat tarball version pinned as a Dockerfile ARG; versions resolved from Maven Central",
+      "managerFilePatterns": [".devcontainer/Dockerfile"],
+      "matchStrings": ["ARG TOMCAT_VERSION=(?<currentValue>[\\d.]+)"],
+      "datasourceTemplate": "maven",
+      "depNameTemplate": "org.apache.tomcat:tomcat",
+      "versioningTemplate": "maven"
+    },
+    {
+      "customType": "regex",
+      "description": "Claude Code CLI pinned in the global npm install",
+      "managerFilePatterns": [".devcontainer/Dockerfile"],
+      "matchStrings": ["@anthropic-ai/claude-code@(?<currentValue>[\\d.]+)"],
+      "datasourceTemplate": "npm",
+      "depNameTemplate": "@anthropic-ai/claude-code"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Cooldown: no update PR until a release has been public for 14 days",
+      "matchManagers": ["dockerfile", "custom.regex"],
+      "minimumReleaseAge": "14 days"
+    },
+    {
+      "description": "Grouper 5.x is javax.servlet; Tomcat 10/11 (jakarta.*) will not load it",
+      "matchDepNames": ["org.apache.tomcat:tomcat"],
+      "allowedVersions": "/^9\\./"
+    },
+    {
+      "description": "claude-code releases frequently; shorter escrow so the container does not lag weeks behind",
+      "matchDepNames": ["@anthropic-ai/claude-code"],
+      "minimumReleaseAge": "3 days"
+    }
+  ]
+}

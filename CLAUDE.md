@@ -58,16 +58,14 @@ the actual state of the repo. Check these first.
 ### 1. Java version
 
 Check `grouper-parent/pom.xml` for the `<java.version>` property (or
-`<maven.compiler.source>`). The Dockerfile currently uses `eclipse-temurin:11-jdk-jammy`.
-If the value is `17`, change the FROM line:
-
-```dockerfile
-FROM eclipse-temurin:17-jdk-jammy
-```
+`<maven.compiler.source>`). The Dockerfile uses `eclipse-temurin:17-jdk-jammy`,
+which matches Grouper 5.x/6.x. If the pom ever moves to a different Java version,
+change the FROM line accordingly.
 
 ### 2. Tomcat version
 
-The Dockerfile installs Tomcat 9.0.87. Verify this is consistent with what Grouper
+The Dockerfile installs a pinned Tomcat 9.x (see TOMCAT_VERSION in the Dockerfile;
+Renovate keeps it current within 9.x). Verify this is consistent with what Grouper
 expects by checking the `i2incommon/grouper` Dockerfile in the upstream repo or the
 `grouper-parent/grouper-ui/build.xml` for any Tomcat version references.
 
