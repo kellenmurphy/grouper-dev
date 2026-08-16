@@ -36,6 +36,11 @@
       "description": "claude-code releases frequently; shorter escrow so the container does not lag weeks behind",
       "matchDepNames": ["@anthropic-ai/claude-code"],
       "minimumReleaseAge": "3 days"
+    },
+    {
+      "description": "Grouper requires Java 17; stay on the 17 line of the base image",
+      "matchDepNames": ["eclipse-temurin"],
+      "allowedVersions": "/^17\\b/"
     }
   ]
 }
