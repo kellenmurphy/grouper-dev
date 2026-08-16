@@ -56,8 +56,9 @@ hibernate.c3p0.min_size        = 0
 hibernate.c3p0.timeout         = 100
 hibernate.c3p0.max_statements  = 0
 
-# Allow automatic DDL upgrades up to any 6.x version (required for Tomcat startup)
-registry.auto.ddl.upToVersion = 6.*.*
+# Allow automatic DDL upgrades up to any 7.x version (required for Tomcat startup).
+# This is a ceiling: older branches (5.x/6.x) stay below it and are unaffected.
+registry.auto.ddl.upToVersion = 7.*.*
 
 # Enable the Grouper UI in this dev environment
 grouper.is.ui = true
@@ -127,7 +128,9 @@ else
 
     if [ "${SCHEMA_EXISTS}" = "0" ]; then
         echo "==> [init-grouper] Registry not found — running gsh -registry -runscript..."
-        cd /workspace/grouper && grouper/bin/gsh.sh -registry -runscript
+        # -noprompt: gsh otherwise asks y/n on stdin, which hangs or dies under
+        # postCreateCommand and any other non-interactive run.
+        cd /workspace/grouper && grouper/bin/gsh.sh -registry -runscript -noprompt
         echo "    Registry initialized."
     else
         echo "    Registry already initialized — skipping."
