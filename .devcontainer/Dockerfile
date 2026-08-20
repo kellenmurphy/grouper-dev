@@ -1,8 +1,15 @@
 # Grouper Development Container
 #
-# Based on Eclipse Temurin JDK 17. Grouper 5.x / 6.x requires Java 17.
-# Verify against grouper-parent/pom.xml -> java.version if in doubt.
-FROM eclipse-temurin:17-jdk-jammy
+# Based on Eclipse Temurin JDK 17. grouper-parent/pom.xml on GROUPER_7_BRANCH
+# declares maven.compiler.source/target 17, so 17 is the correct line. Verify
+# against that pom before changing it.
+#
+# Distro suffix is Ubuntu 26.04 LTS (resolute), supported to 2031. Renovate's
+# eclipse-temurin rule pins the major version but does not move the distro
+# suffix, so that part is a deliberate manual bump. Fall back to 17-jdk-noble
+# (24.04 LTS) if resolute ever causes trouble; both carry every package this
+# image installs, including NodeSource's Node 24.
+FROM eclipse-temurin:17-jdk-resolute
 
 # GROUPER_HOME points to the core module so gsh.sh can build its classpath.
 # CWD must be /workspace/grouper when invoking gsh.sh — isApiMvnHome() checks
@@ -25,8 +32,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # The Claude Code VS Code extension's background helper processes fail under
 # root (the CLI refuses --dangerously-skip-permissions as root), so the
 # container runs as "vscode" with passwordless sudo for dev convenience.
-RUN groupadd --gid 1000 vscode \
-    && useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash vscode \
+#
+# Ubuntu 24.04 and later ship a default "ubuntu" account already holding
+# UID/GID 1000, so a plain `useradd --uid 1000` fails the build with "UID 1000
+# is not unique". Rename that account instead of adding a second one: the dev
+# user has to keep UID 1000 so bind-mounted repo files stay writable from inside
+# the container. The else branch covers older bases (jammy and earlier) where
+# 1000 is free.
+RUN if getent passwd 1000 >/dev/null; then \
+        existing_user="$(getent passwd 1000 | cut -d: -f1)" \
+        && existing_group="$(getent group 1000 | cut -d: -f1)" \
+        && usermod --login vscode --home /home/vscode --move-home "${existing_user}" \
+        && groupmod --new-name vscode "${existing_group}" \
+        && usermod --shell /bin/bash vscode ; \
+    else \
+        groupadd --gid 1000 vscode \
+        && useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash vscode ; \
+    fi \
     && echo "vscode ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/vscode \
     && chmod 0440 /etc/sudoers.d/vscode
 

@@ -104,26 +104,23 @@
     // ─────────────────────────────────────────────────────────────────────────
 
     {
-      // Start Tomcat in the foreground. CATALINA_OPTS (set in the Dockerfile)
-      // includes the JDWP agent, so the debugger can attach immediately after.
-      // This is a background task — VSCode tracks it as running until Tomcat stops.
+      // The preLaunchTask for "Start Tomcat + Attach Debugger".
+      //
+      // NOT a background task. It starts Tomcat detached and blocks until the
+      // JDWP port is actually accepting, then exits. VS Code treats a normal
+      // task as finished when the process exits, so the debugger attaches only
+      // after the JVM is listening.
+      //
+      // The previous version used `catalina.sh run` as a background task with a
+      // problemMatcher scraping the log for "Server startup in". That put an
+      // easily-desynced regex on the critical path and failed with "Failed to
+      // attach to localhost:5005 (attach timeout 30000)". Port polling has no
+      // such failure mode. Use "Tomcat: Start (foreground console)" below if
+      // you want the log in the terminal instead.
       "label": "Tomcat: Start",
       "type": "shell",
-      "command": "${CATALINA_HOME}/bin/catalina.sh run",
-      "isBackground": true,
-      "problemMatcher": {
-        "pattern": {
-          "regexp": "^.*$",
-          "file": 0,
-          "line": 1,
-          "message": 2
-        },
-        "background": {
-          "activeOnStart": true,
-          "beginsPattern": "^.*Catalina.*$",
-          "endsPattern": "^.*Server startup in.*$"
-        }
-      },
+      "command": "bash /workspace/grouper-dev/scripts/start-tomcat.sh",
+      "problemMatcher": [],
       "presentation": {
         "panel": "dedicated",
         "reveal": "always",
@@ -132,17 +129,54 @@
     },
 
     {
-      "label": "Tomcat: Stop",
+      // Runs Tomcat in the foreground so the log streams into the terminal.
+      // Convenient for watching startup, but it never exits, so it cannot be
+      // used as a preLaunchTask. Attach with "Attach to Tomcat (JDWP)" once
+      // "Server startup in [...]" appears.
+      "label": "Tomcat: Start (foreground console)",
       "type": "shell",
-      "command": "${CATALINA_HOME}/bin/catalina.sh stop",
-      "problemMatcher": []
+      "command": "${CATALINA_HOME}/bin/catalina.sh run",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always",
+        "clear": true
+      }
     },
 
     {
+      // Blocks until the ports are actually released. catalina.sh stop returns
+      // as soon as the shutdown command is sent, which made Restart race itself.
+      "label": "Tomcat: Stop",
+      "type": "shell",
+      "command": "bash /workspace/grouper-dev/scripts/stop-tomcat.sh",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      }
+    },
+
+    {
+      // Safe now that both halves wait for the ports rather than returning early.
       "label": "Tomcat: Restart",
       "dependsOrder": "sequence",
       "dependsOn": ["Tomcat: Stop", "Tomcat: Start"],
       "problemMatcher": []
+    },
+
+    {
+      // Tomcat started by "Tomcat: Start" is detached, so its console goes here.
+      "label": "Tomcat: Tail Logs",
+      "type": "shell",
+      "command": "tail -f ${CATALINA_HOME}/logs/catalina.out",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      }
     },
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -150,19 +184,36 @@
     // ─────────────────────────────────────────────────────────────────────────
 
     {
-      // Initialize (or re-initialize) the Grouper database schema.
-      // Safe to re-run; Grouper handles existing schemas gracefully.
-      "label": "GSH: Init Registry",
+      // Converges the whole dev environment: config symlinks, the generated
+      // grouper.hibernate.properties, the database schema, and the GrouperSystem
+      // UI password row.
+      //
+      // This deliberately runs init-grouper.sh rather than gsh -registry directly.
+      // postCreateCommand runs that script before any build exists, so it skips
+      // both the registry init and the password step; running it again after the
+      // first build is what actually creates the grouper_password row that
+      // grouper.is.ui.basicAuthn needs. Calling bare gsh here would create the
+      // schema and leave the UI unloggable.
+      //
+      // Idempotent — safe to re-run at any time.
+      "label": "Grouper: Init Registry + UI Password",
       "type": "shell",
-      "command": "cd /workspace/grouper && grouper/bin/gsh.sh -registry -runscript",
-      "problemMatcher": []
+      "command": "bash /workspace/grouper-dev/scripts/init-grouper.sh",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      }
     },
 
     {
       // Open an interactive GSH session in the terminal.
+      // GROUPER_GSH_JVMARGS: VS Code task terminals have no DISPLAY, and gsh.sh
+      // only passes this variable through rather than setting headless itself,
+      // so without it GSH dies on an AWT/X11 library error.
       "label": "GSH: Interactive Shell",
       "type": "shell",
-      "command": "cd /workspace/grouper && grouper/bin/gsh.sh",
+      "command": "cd /workspace/grouper && GROUPER_GSH_JVMARGS=-Djava.awt.headless=true grouper/bin/gsh.sh",
       "problemMatcher": [],
       "presentation": {
         "panel": "dedicated",
