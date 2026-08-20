@@ -45,6 +45,7 @@
     "java.configuration.maven.notCoveredPluginExecutionSeverity": "ignore",
     "java.errors.incompleteClasspath.severity": "ignore",
 
-    "window.title": "Grouper Development"
+    "window.title": "Grouper Development",
+    "chat.disableAIFeatures": true
   }
 }

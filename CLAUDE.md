@@ -36,13 +36,20 @@ grouper/                          ← repo root (also the VS Code workspace root
 │       └── .gitkeep              ← Drop *.sql init scripts here if needed
 ├── .vscode/
 │   ├── tasks.json                ← Build, deploy, Tomcat, GSH tasks
-│   ├── launch.json               ← JDWP attach + compound debug config
+│   ├── launch.json               ← JDWP attach + F5 start-and-attach config
 │   ├── extensions.json           ← Recommended extensions
 │   └── settings.json             ← Java, Checkstyle, editor settings
 ├── .editorconfig                 ← Coding standards (2-space Java indent, LF, 200 char)
 ├── scripts/
-│   └── init-grouper.sh           ← First-time setup: waits for DB, writes properties,
-│                                    inits Grouper registry. Run by postCreateCommand.
+│   ├── init-grouper.sh           ← First-time setup: waits for DB, writes properties,
+│   │                                inits Grouper registry, sets the GrouperSystem UI
+│   │                                password. Run by postCreateCommand and by the
+│   │                                "Grouper: Init Registry + UI Password" task.
+│   ├── clone-grouper-src.sh      ← Host-side shallow clone of Internet2/grouper.
+│   │                                Run by initializeCommand.
+│   ├── start-tomcat.sh           ← Starts Tomcat detached, blocks until JDWP 5005 is
+│   │                                accepting. preLaunchTask for the F5 config.
+│   └── stop-tomcat.sh            ← Stops Tomcat, blocks until the ports release.
 ├── CLAUDE.md                     ← This file
 └── grouper-parent/               ← Existing Maven multi-module source (do not modify
                                      structure)
@@ -58,9 +65,11 @@ the actual state of the repo. Check these first.
 ### 1. Java version
 
 Check `grouper-parent/pom.xml` for the `<java.version>` property (or
-`<maven.compiler.source>`). The Dockerfile uses `eclipse-temurin:17-jdk-jammy`,
-which matches Grouper 5.x/6.x. If the pom ever moves to a different Java version,
-change the FROM line accordingly.
+`<maven.compiler.source>`). The Dockerfile uses `eclipse-temurin:17-jdk-resolute`
+(Ubuntu 26.04 LTS). GROUPER_7_BRANCH declares `maven.compiler.source/target` 17,
+so the 17 line is correct. If the pom ever moves to a different Java version,
+change the FROM line accordingly. Renovate pins the major version but will not
+move the distro suffix, so that is a manual bump.
 
 ### 2. Tomcat version
 
@@ -158,12 +167,17 @@ In DBeaver's Driver Properties, set:
 ### First time (fresh clone)
 ```
 1. Ctrl+Shift+B → "Maven: Build All (skip tests)"   # ~10-20 min first run
-2. Task: "Ant: UI dev libs"
-3. Task: "Deploy: UI to Tomcat"
-4. Task: "GSH: Init Registry"                        # skipped automatically if already done
-5. F5 → "Start Tomcat + Attach Debugger"
-6. Browse http://localhost:8080/grouper
+2. Task: "Deploy: UI to Tomcat"
+3. Task: "Grouper: Init Registry + UI Password"     # required; see note below
+4. F5 → "Start Tomcat + Attach Debugger"
+5. Browse http://localhost:8080/grouper
 ```
+
+Step 3 is not optional on a fresh clone. `postCreateCommand` runs `init-grouper.sh`
+before any build exists, so it skips the registry init and the `GrouperSystem`
+password. The task re-runs the same script against the completed build, creating
+the schema and the `grouper_password` row. Skip it and the UI 401s on every login,
+including the documented default. The script is idempotent.
 
 ### Ongoing
 ```
@@ -174,7 +188,13 @@ After changing WS:                         Maven: Build WS only → Deploy: WS t
 ```
 
 ### Debugging
-- **F5** launches the compound config: starts Tomcat, waits for startup, attaches JDWP
+- **F5** runs the `Tomcat: Start` task (which blocks until port 5005 accepts and
+  the UI answers) and then attaches JDWP. Tomcat runs detached; use
+  `Tomcat: Tail Logs` for its console, or `Tomcat: Start (foreground console)`
+  plus `Attach to Tomcat (JDWP)` to keep the log in the terminal
+- Tomcat is launched under `setsid`, in its own session, so VS Code's task
+  process-group teardown cannot SIGTERM it out from under the attaching
+  debugger. It therefore outlives the terminal: stop it with `Tomcat: Stop`
 - Breakpoints work in any Java file under `grouper-parent/`
 - For GSH script debugging, use the "Debug GSH Script" launch config
 - For JUnit test debugging, use the "Debug JUnit Test" launch config or right-click
@@ -190,11 +210,20 @@ committing secrets, create a `.env` file next to `docker-compose.yml`:
 ```env
 GROUPER_SYSTEM_PASSWORD=yoursecretpassword
 TEST_SUBJECT_PASSWORD=yoursecretpassword
-MYSQL_ROOT_PASSWORD=yourrootpassword
 DB_PASSWORD=yourdbpassword
 ```
 
-`.env` should be in `.gitignore`. Do not commit it.
+`DB_PASSWORD` drives both the app and the postgres service, so there is no separate
+`POSTGRES_PASSWORD` to keep in sync. Every value in the compose `environment:` blocks
+must stay in `${VAR:-default}` form: a bare literal there wins over `.env` and ignores
+the override silently.
+
+Neither override is retroactive. `GROUPER_SYSTEM_PASSWORD` is read only when
+`init-grouper.sh` runs, and `DB_PASSWORD` only when PostgreSQL initialises an empty
+data directory. Changing either after the fact requires re-running the init task or
+dropping the `postgres-data` volume.
+
+`.env` is in `.gitignore`. Do not commit it.
 
 ---
 

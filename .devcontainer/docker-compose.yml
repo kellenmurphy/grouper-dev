@@ -30,13 +30,16 @@ services:
       db:
         condition: service_healthy
     environment:
+      # Every value below is overridable from .devcontainer/.env. They MUST use
+      # ${VAR:-default} interpolation: a bare literal here wins over .env and
+      # silently ignores the override.
       DB_HOST: db
       DB_PORT: 5432
-      DB_NAME: grouper
-      DB_USER: grouper
-      DB_PASSWORD: grouper
-      GROUPER_SYSTEM_PASSWORD: changeme
-      TEST_SUBJECT_PASSWORD: changeme
+      DB_NAME: ${DB_NAME:-grouper}
+      DB_USER: ${DB_USER:-grouper}
+      DB_PASSWORD: ${DB_PASSWORD:-grouper}
+      GROUPER_SYSTEM_PASSWORD: ${GROUPER_SYSTEM_PASSWORD:-changeme}
+      TEST_SUBJECT_PASSWORD: ${TEST_SUBJECT_PASSWORD:-changeme}
       # Optional: long-lived Claude Code token (from `claude setup-token`) set in
       # .devcontainer/.env — skips interactive sign-in. Inert when unset; the
       # claude-auth volume already persists interactive sign-in across rebuilds.
@@ -49,14 +52,16 @@ services:
       # Exposed to host for DBeaver: connect at localhost:5432
       - "5432:5432"
     environment:
-      POSTGRES_DB: grouper
-      POSTGRES_USER: grouper
-      POSTGRES_PASSWORD: grouper
+      # Driven by the same DB_* vars as the app service so the two can never
+      # disagree. Overriding DB_PASSWORD alone changes both sides.
+      POSTGRES_DB: ${DB_NAME:-grouper}
+      POSTGRES_USER: ${DB_USER:-grouper}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-grouper}
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./initdb:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U grouper -d grouper"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-grouper} -d ${DB_NAME:-grouper}"]
       interval: 10s
       timeout: 5s
       retries: 6

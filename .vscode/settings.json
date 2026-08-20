@@ -15,7 +15,8 @@
   "java.help.firstView": "none",
   "java.help.showReleaseNotes": false,
   // Pin the runtime explicitly so VSCode doesn't prompt to upgrade or install Copilot.
-  // Path is the JDK location inside the eclipse-temurin:17-jdk-jammy container image.
+  // Path is the JDK location inside the eclipse-temurin container image; it is
+  // /opt/java/openjdk on every temurin tag, so a distro-suffix bump does not move it.
   "java.jdt.ls.java.home": "/opt/java/openjdk",
   "java.configuration.runtimes": [
     {

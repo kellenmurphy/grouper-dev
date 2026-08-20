@@ -6,7 +6,8 @@
     // PRIMARY: Attach to running Tomcat via JDWP
     //
     // Workflow:
-    //   1. Run "Tomcat: Start" task (or use the compound config below).
+    //   1. Run "Tomcat: Start" task (or use "Start Tomcat + Attach Debugger",
+    //      which runs that task for you via preLaunchTask).
     //   2. Wait for "Server startup in..." in the Tomcat terminal.
     //   3. Launch this config to attach the debugger.
     //   4. Set breakpoints in any Java source under grouper-parent/ — they work
@@ -36,11 +37,17 @@
     },
 
     // ─────────────────────────────────────────────────────────────────────────
-    // COMPOUND: Start Tomcat, then attach debugger
+    // PRIMARY F5 TARGET: Start Tomcat, then attach debugger
+    //
+    // Not a VS Code "compound" (there is no compounds block here) — it is an
+    // attach config whose preLaunchTask starts Tomcat. The attach waits for the
+    // "Tomcat: Start" background problemMatcher to report ready, so that
+    // matcher has to be correct or F5 either attaches too early and gets
+    // connection refused, or hangs forever waiting. See tasks.json.
     //
     // This is the single-button dev loop. Hit F5 (or click the green play
-    // button with "Start Tomcat + Attach" selected), Tomcat boots in the
-    // background, and the debugger attaches once it's ready.
+    // button with "Start Tomcat + Attach Debugger" selected), Tomcat boots in
+    // the background, and the debugger attaches once it's ready.
     // ─────────────────────────────────────────────────────────────────────────
     {
       "type": "java",

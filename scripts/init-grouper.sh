@@ -105,8 +105,11 @@ if [ -f "${TOMCAT_USERS_TMPL}" ]; then
 fi
 
 # ── 6. Initialize Grouper registry ───────────────────────────────────────────
-# Only runs if the Maven build has already produced grouper.jar.
-# If not built yet, skip — run "GSH: Init Registry" after first build.
+# Only runs if the Maven build has already produced grouper.jar. On a fresh
+# clone there is no build yet at postCreateCommand time, so this whole section
+# is skipped and the environment is NOT yet usable — the schema and the
+# GrouperSystem UI password both get created by the re-run after the first
+# build. That re-run is the "Grouper: Init Registry + UI Password" task.
 echo "==> [init-grouper] Checking Grouper registry..."
 
 GROUPER_JAR=$(find /workspace/grouper/grouper -name "grouper*.jar" -path "*/target/*" 2>/dev/null | grep -v sources | grep -v tests | head -1 || true)
@@ -114,8 +117,9 @@ GROUPER_JAR=$(find /workspace/grouper/grouper -name "grouper*.jar" -path "*/targ
 if [ -z "${GROUPER_JAR}" ]; then
     echo ""
     echo "    Skipping registry init — project hasn't been built yet."
-    echo "    After your first build completes, run:"
-    echo "      Terminal > Run Task > GSH: Init Registry"
+    echo "    This is expected on a fresh clone. The UI will not accept a login"
+    echo "    until this step runs, so after your first build completes:"
+    echo "      Terminal > Run Task > Grouper: Init Registry + UI Password"
     echo ""
 else
     SCHEMA_EXISTS=$(PGPASSWORD="${DB_PASSWORD:-grouper}" psql \
@@ -130,23 +134,62 @@ else
         echo "==> [init-grouper] Registry not found — running gsh -registry -runscript..."
         # -noprompt: gsh otherwise asks y/n on stdin, which hangs or dies under
         # postCreateCommand and any other non-interactive run.
-        cd /workspace/grouper && grouper/bin/gsh.sh -registry -runscript -noprompt
+        # GROUPER_GSH_JVMARGS: no DISPLAY here, and gsh.sh only passes this
+        # through rather than setting headless itself, so without it GSH dies on
+        # an AWT/X11 library error.
+        cd /workspace/grouper && GROUPER_GSH_JVMARGS="-Djava.awt.headless=true" \
+            grouper/bin/gsh.sh -registry -runscript -noprompt
         echo "    Registry initialized."
     else
         echo "    Registry already initialized — skipping."
     fi
 
     # ── 6b. GrouperSystem UI password ────────────────────────────────────────
-    # grouper.is.ui.basicAuthn = true requires a password in the grouper_password
-    # table. GrouperPasswordSave handles upsert so this is safe to re-run.
-    GROUPER_SYSTEM_PW="${GROUPER_SYSTEM_PASSWORD:-changeme}"
+    # grouper.is.ui.basicAuthn = true means the UI validates against the
+    # grouper_password table, so without this row the UI rejects every login.
+    # GrouperPasswordSave upserts, so this is safe to re-run.
     echo "==> [init-grouper] Setting GrouperSystem UI password..."
-    cat > /tmp/set-grouper-password.gsh << GSHEOF
-new GrouperPasswordSave().assignUsername("GrouperSystem").assignPassword("${GROUPER_SYSTEM_PW}").assignApplication(GrouperPassword.Application.UI).save();
-println "[password] GrouperSystem UI password set.";
+
+    # The password is read from the environment inside GSH rather than
+    # interpolated into the script body, so the plaintext never lands on disk
+    # and never reaches the task terminal (GSH echoes the script it loads).
+    # mktemp -d is mode 700; the whole directory goes on exit.
+    GSH_TMPDIR=$(mktemp -d)
+    trap 'rm -rf "${GSH_TMPDIR}"' EXIT
+    GSH_SCRIPT="${GSH_TMPDIR}/set-grouper-password.gsh"
+    GSH_OUT="${GSH_TMPDIR}/gsh-output.log"
+
+    # System.out.println, not println: GSH is BeanShell, where a bare `println`
+    # is a parse error. It failed silently before because the old invocation
+    # discarded the exit status.
+    cat > "${GSH_SCRIPT}" << 'GSHEOF'
+new GrouperPasswordSave().assignUsername("GrouperSystem").assignPassword(System.getenv("GROUPER_INIT_UI_PASSWORD")).assignApplication(GrouperPassword.Application.UI).save();
+System.out.println("[password] GrouperSystem UI password set.");
 GSHEOF
-    cd /workspace/grouper && GROUPER_GSH_JVMARGS="-Djava.awt.headless=true" \
-        grouper/bin/gsh.sh /tmp/set-grouper-password.gsh 2>&1 | grep -E "^\[password\]|ERROR" || true
+
+    # Output goes to a file rather than through a pipe: `set -o pipefail` plus a
+    # short-circuiting `grep -q` would SIGPIPE gsh and report a false failure.
+    # And no trailing "|| true" — discarding gsh's exit status is what let a
+    # broken UI login ship unnoticed.
+    set +e
+    (
+        cd /workspace/grouper \
+            && GROUPER_INIT_UI_PASSWORD="${GROUPER_SYSTEM_PASSWORD:-changeme}" \
+               GROUPER_GSH_JVMARGS="-Djava.awt.headless=true" \
+               grouper/bin/gsh.sh "${GSH_SCRIPT}"
+    ) > "${GSH_OUT}" 2>&1
+    GSH_RC=$?
+    set -e
+
+    if [ "${GSH_RC}" -ne 0 ] || ! grep -qF "[password] GrouperSystem UI password set." "${GSH_OUT}"; then
+        echo "" >&2
+        echo "ERROR: failed to set the GrouperSystem UI password (gsh exit ${GSH_RC})." >&2
+        echo "       The registry may be initialized, but the UI will reject every login." >&2
+        echo "       Full GSH output follows:" >&2
+        cat "${GSH_OUT}" >&2
+        exit 1
+    fi
+    echo "    GrouperSystem UI password set."
 fi
 
 # ── 7. Done ───────────────────────────────────────────────────────────────────
@@ -156,7 +199,7 @@ echo ""
 echo "    Next steps:"
 echo "      1. Run: Maven: Build All (skip tests)  [Ctrl+Shift+B]"
 echo "      2. Run: Deploy: UI to Tomcat"
-echo "      3. Run: GSH: Init Registry"
+echo "      3. Run: Grouper: Init Registry + UI Password"
 echo "      4. Launch: Start Tomcat + Attach Debugger  [F5]"
 echo "      5. Browse to: http://localhost:8080/grouper"
 echo ""

@@ -115,16 +115,13 @@ on first run are automatically retried.
 
 ```
 Terminal → Run Task → Deploy: UI to Tomcat
-Terminal → Run Task → GSH: Init Registry
+Terminal → Run Task → Grouper: Init Registry + UI Password
 F5  →  Start Tomcat + Attach Debugger
 ```
 
-Browse to `http://localhost:8080/grouper` and log in with `GrouperSystem` / `changeme`
-(or whatever you set `GROUPER_SYSTEM_PASSWORD` to in your `.env`).
+Browse to `http://localhost:8080/grouper` and log in with `GrouperSystem` / `changeme` (or whatever you set `GROUPER_SYSTEM_PASSWORD` to in your `.env`).
 
-> The registry init and UI password are handled automatically by `init-grouper.sh` on container
-> creation if the build already exists. On a fresh clone you always need to build first (step 4),
-> then run **GSH: Init Registry** once.
+> **Do not skip the Init Registry task on a fresh clone.** `postCreateCommand` runs `init-grouper.sh` before any build exists, so on first container creation the script skips both the registry init and the `GrouperSystem` password, and says so in its output. The task above re-runs the same script now that the build is there, which is what creates the schema and the `grouper_password` row the UI authenticates against. Without it the UI returns 401 for every login, including the documented default. The task is idempotent, so re-run it any time.
 
 ## Typical dev loop
 
@@ -138,9 +135,11 @@ Browse to `http://localhost:8080/grouper` and log in with `GrouperSystem` / `cha
 
 ## Debugging
 
-**F5** launches the compound config: starts Tomcat in a background terminal,
-waits for the startup message, then attaches the JDWP debugger. Set breakpoints
-anywhere in the Grouper source — they're live immediately.
+**F5** runs the `Tomcat: Start` task and then attaches the JDWP debugger. That task starts Tomcat detached and blocks until port 5005 is accepting and the UI answers, so the debugger never attaches to a JVM that is not listening yet. Set breakpoints anywhere in the Grouper source, they are live immediately.
+
+Because Tomcat is detached, its console goes to `$CATALINA_HOME/logs/catalina.out`. Run **Tomcat: Tail Logs** to watch it, or use **Tomcat: Start (foreground console)** when you would rather have the log in the terminal and attach separately with **Attach to Tomcat (JDWP)**.
+
+Tomcat is started with `setsid`, in its own session, so it deliberately outlives the task terminal that launched it. VS Code kills a task's process group when the task exits, and without this the JVM was taking SIGTERM and shutting down a fraction of a second before the debugger attached. The trade-off is that closing the terminal no longer stops Tomcat: use **Tomcat: Stop**, which waits for the ports to release.
 
 Hot Code Replacement works for method body changes without a restart. Structural
 changes (new methods, fields, classes) require a rebuild and restart.
@@ -165,7 +164,7 @@ PostgreSQL is exposed on your host at `localhost:5432`.
 | Port | `5432` |
 | Database | `grouper` |
 | Username | `grouper` |
-| Password | `grouper` (or whatever's in your `.env`) |
+| Password | `grouper` (or whatever you set `DB_PASSWORD` to in your `.env`) |
 | Driver | PostgreSQL |
 
 ## Volumes
@@ -202,29 +201,37 @@ One file is **generated** (not tracked): `grouper/conf/grouper.hibernate.propert
 It is written by `init-grouper.sh` at container creation using the DB credentials from
 environment variables. Edit `scripts/init-grouper.sh` if you need to change those settings.
 
-**Authentication:** the UI uses Grouper's built-in HTTP Basic auth (`grouper.is.ui.basicAuthn = true`).
-Credentials are stored in the `grouper_password` database table, not in `tomcat-users.xml`.
-`init-grouper.sh` creates the `GrouperSystem` UI password automatically using the
-`GROUPER_SYSTEM_PASSWORD` env var (default: `changeme`).
+**Authentication:** the UI uses Grouper's built-in HTTP Basic auth (`grouper.is.ui.basicAuthn = true`). Credentials live in the `grouper_password` database table, not in `tomcat-users.xml`, so `tomcat-users.xml` has no bearing on whether a UI login works. `init-grouper.sh` writes the `GrouperSystem` row from the `GROUPER_SYSTEM_PASSWORD` env var (default: `changeme`), but only on a run where the Maven build already exists. If the UI 401s on a password you believe is correct, that row is the first thing to check:
 
-**GSH headless:** when running GSH non-interactively (scripts, `init-grouper.sh`), pass
-`GROUPER_GSH_JVMARGS=-Djava.awt.headless=true` to avoid an AWT/X11 library error.
+```sql
+select username, application, encryption_type from grouper_password;
+```
+
+An empty result means `init-grouper.sh` has not yet run against a completed build. Run the **Grouper: Init Registry + UI Password** task and try again.
+
+**GSH headless:** GSH needs `GROUPER_GSH_JVMARGS=-Djava.awt.headless=true` anywhere there is no DISPLAY, which includes VS Code task terminals as well as `postCreateCommand`. `gsh.sh` only passes the variable through and never sets headless itself, so omitting it produces an AWT/X11 library error. The tasks and `init-grouper.sh` set it already; add it to any GSH command you run by hand.
 
 ## Customizing credentials
 
-Create a `.env` file in `grouper-dev/.devcontainer/` to override defaults without
-committing secrets (`.env` is git-ignored):
+Create a `.env` file in `grouper-dev/.devcontainer/` to override defaults without committing secrets (`.env` is git-ignored):
 
 ```env
 GROUPER_SYSTEM_PASSWORD=yoursecretpassword
 TEST_SUBJECT_PASSWORD=yoursecretpassword
-POSTGRES_PASSWORD=yourdbpassword
+# Sets the password on both the app and the postgres service; there is no
+# separate POSTGRES_PASSWORD knob, so the two can never drift apart.
 DB_PASSWORD=yourdbpassword
 # Optional: skip interactive Claude sign-in entirely (mint with `claude setup-token`).
 # Per-person credential — never commit or share it. Interactive sign-in already
 # persists in the claude-auth volume, so most people can omit this.
 CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat...
 ```
+
+Two things to know about when these take effect:
+
+`GROUPER_SYSTEM_PASSWORD` is only read when `init-grouper.sh` runs. Changing it in `.env` does not rewrite an existing `grouper_password` row, so rebuild the container or run the **Grouper: Init Registry + UI Password** task afterwards.
+
+`DB_PASSWORD` is only applied when PostgreSQL initialises an empty data directory. Once the `postgres-data` volume exists, changing it in `.env` leaves the database password as it was and breaks the connection instead of updating it. Either set it before you first start the stack, or drop the volume (`docker volume rm <project-name>_postgres-data`, which destroys the registry) and re-init.
 
 ## Checkstyle
 
@@ -237,7 +244,7 @@ The version is pinned to `8.23` — Grouper's config is incompatible with higher
 
 ## Java version
 
-The container uses JDK 17 (`eclipse-temurin:17-jdk-jammy`), matching the
+The container uses JDK 17 (`eclipse-temurin:17-jdk-resolute`, Ubuntu 26.04 LTS), matching the
 `maven.compiler.source` in `grouper-parent/pom.xml`.
 
 
