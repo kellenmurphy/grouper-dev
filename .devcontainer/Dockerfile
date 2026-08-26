@@ -54,7 +54,7 @@ RUN if getent passwd 1000 >/dev/null; then \
 
 # ── Tomcat 9 ──────────────────────────────────────────────────────────────────
 # Grouper 5.x targets Tomcat 9. Pin to a specific version for reproducibility.
-ARG TOMCAT_VERSION=9.0.120
+ARG TOMCAT_VERSION=9.0.121
 ENV CATALINA_HOME=/opt/tomcat
 
 RUN curl -fsSL \
