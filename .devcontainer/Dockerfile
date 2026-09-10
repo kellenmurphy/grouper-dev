@@ -71,7 +71,7 @@ RUN curl -fsSL \
 RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/* \
-    && npm install -g @anthropic-ai/claude-code@2.1.241
+    && npm install -g @anthropic-ai/claude-code@2.1.263
 
 # The CLI self-updates at runtime by default, which would silently defeat the
 # version pin above — updates arrive only via Renovate PR + image rebuild.
