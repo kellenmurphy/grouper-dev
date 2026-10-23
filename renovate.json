@@ -34,9 +34,10 @@
       "allowedVersions": "/^9\\./"
     },
     {
-      "description": "claude-code releases frequently; shorter escrow so the container does not lag weeks behind",
+      "description": "claude-code releases frequently; shorter escrow so the container does not lag weeks behind, and automerge so each bump does not need a hand merge",
       "matchDepNames": ["@anthropic-ai/claude-code"],
-      "minimumReleaseAge": "3 days"
+      "minimumReleaseAge": "3 days",
+      "automerge": true
     },
     {
       "description": "Grouper requires Java 17; stay on the 17 line of the base image",
